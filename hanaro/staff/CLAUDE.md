@@ -4,6 +4,8 @@ Detail for the 임직원 전용 페이지 (`staff.html`, ~15.5k lines, 9 inline 
 
 Everything below lives in `staff.html` unless stated otherwise. Historical rationale for these designs is in `docs/개발일지.md` (newest first).
 
+> ⚠️ **2026-09-01: 임직원·일반회원 로그인 폐지.** 로그인은 `users.isAdmin === true`인 관리자만 가능하다(`auth.js`의 `enforceAdminOnly` — 관리자가 아니면 인증 성공 후 강제 로그아웃). 즉 **아래 권한 체계는 코드상 그대로 살아 있지만, 현재 이 페이지에 도달할 수 있는 것은 관리자뿐이다** — `userCan`/`asrPerm`은 admin을 항상 통과시키므로 실질적으로 전 권한이 열린 상태로 동작한다. 임직원 로그인을 되살리면 아래 설명이 그대로 다시 유효해진다. 상세·되돌리는 법은 루트 문서의 '로그인·회원가입 폐지' 절과 `docs/개발일지.md` 2026-09-01 참조.
+
 ## Permissions (`users.permissions`, `userCan` / `asrPerm`)
 
 Permission helper `userCan(area)` (areas: `all/notice/cert/company/photos/schedule/asResult/asAssignee/asApprStaff/asApprove/asApproveCeo/inventory/materials/leaveSchedule/leaveApprove/leaveApproveFactory/report/hr/pay`) gates UI; admin overrides — the 결재 areas (`asApprStaff`/`asApprove`/`asApproveCeo`/`leaveApprove`/`leaveApproveFactory`) are checked via `asrPerm()`, which passes admins automatically but has **NO `all`-permission override** (the 권한설정 modal can't grant them to admin accounts anyway). Stored in `users.permissions`. Areas are data-driven via `PERM_AREAS` (drives the 권한설정 modal checkboxes `#perm-<area>`); the modal rows show a parenthetical `.perm-desc` describing each area's operations (쓰기/읽기/수정/삭제). The modal groups rows under **category chips** (`#perm-cat-nav`, `setPermCat`): 회사운영/직원게시판/A/S 처리결과/운영관리·사진첩 via `data-cat` on each `.perm-row`, with the '전체' row pinned above the chips — display filter only; hidden rows stay in the DOM so save/load always covers all areas.
