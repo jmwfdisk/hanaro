@@ -988,7 +988,7 @@
 <script>/* 로그인 UI 상태를 <html data-auth>로 확정: 첫 페인트부터 고정, 이후 auth.js가 이 속성만 갱신.
    #auth-css(!important)가 data-auth에 따라 표시를 강제 → 비동기 인증 복원 중 인라인 display가
    잠깐 바뀌어도 헤더(로그인/로그아웃) 표시가 흔들리지 않는다(네비 이동 깜빡임 방지). */
-(function(){try{var on=sessionStorage.getItem("loggedIn")==="true"&&!!sessionStorage.getItem("loggedInUser");document.documentElement.setAttribute("data-auth",on?"in":"out");var s=document.createElement("style");s.id="auth-css";s.textContent="html[data-auth=\u0027in\u0027] #login-link{display:none!important}html[data-auth=\u0027in\u0027] #logout-link{display:flex!important}html[data-auth=\u0027out\u0027] #logout-link{display:none!important}html[data-auth=\u0027out\u0027] #login-link{display:flex!important}";(document.head||document.documentElement).appendChild(s);}catch(e){}})();</script>
+(function(){try{var on=sessionStorage.getItem("loggedIn")==="true"&&!!sessionStorage.getItem("loggedInUser");document.documentElement.setAttribute("data-auth",on?"in":"out");if(/[?&]login=1(&|$)/.test(location.search)||location.hash==="#login")document.documentElement.setAttribute("data-login-ui","1");var s=document.createElement("style");s.id="auth-css";s.textContent="html[data-auth=\u0027in\u0027] #login-link{display:none!important}html[data-auth=\u0027in\u0027] #logout-link{display:flex!important}html[data-auth=\u0027out\u0027] #logout-link{display:none!important}html[data-auth=\u0027out\u0027] #login-link{display:flex!important}html[data-auth=\u0027out\u0027]:not([data-login-ui]) #login-link,html[data-auth=\u0027out\u0027]:not([data-login-ui]) .fh-dlogin,html[data-auth=\u0027out\u0027]:not([data-login-ui]) .fh-drawer-cta{display:none!important}html[data-auth=\u0027out\u0027] .employee-btn,html[data-auth=\u0027out\u0027] .employee-button,html[data-auth=\u0027out\u0027] #employee-button,html[data-auth=\u0027out\u0027] #employee-button-mobile,html[data-auth=\u0027out\u0027] .fh-drawer-staff{display:none!important}";(document.head||document.documentElement).appendChild(s);}catch(e){}})();</script>
 </head>
 
     <body>
@@ -1654,7 +1654,7 @@
     </script>
 
     <!-- 공통 인증 스크립트 -->
-    <script src="../js/auth.js?v=20260714a"></script>
+    <script src="../js/auth.js?v=20260828a"></script>
     <script src="../js/footer-bar.js?v=20260706a"></script>
 <script src="../js/redesign.js?v=20260709g"></script>
 

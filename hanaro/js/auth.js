@@ -51,6 +51,61 @@ let isRegistering = false;      // 가입 신청 진행 중 — 연타 차단 + 
 // sessionStorage에 쓰기 직전 값이 그대로인지 재확인한다(로그아웃 이후 뒤늦게 도착한 응답이 세션을 부활시키는 문제 방지).
 let authEpoch = 0;
 
+// ── 임직원·일반회원 로그인/회원가입 폐지 (2026-09-01) ────────────────────────────
+// 관리자(users.isAdmin === true)만 로그인할 수 있다.
+//  - 회원가입: 임직원·일반회원 모두 차단 → 안내창만 표시
+//  - 로그인: 관리자가 아닌 계정은 인증에 성공해도 즉시 강제 로그아웃 + 안내창
+//  - 헤더/드로어의 '로그인'·'임직원' 버튼은 각 페이지 <head>의 #auth-css 스니펫이 숨긴다.
+//    관리자는 주소 뒤에 ?login=1 (또는 #login)을 붙이면 로그인 창이 열린다.
+const LOGIN_DISABLED_MSG = '임직원 및 로그인 기능이 폐지되었습니다.';
+let adminBlockNotified = false; // 안내창 중복 방지 — 차단 경로가 여러 곳(리스너·복원 확인)이라 한 번만 띄운다
+
+// 관리자용 숨은 로그인 진입 여부 (?login=1 또는 #login)
+function adminLoginRequested() {
+    try {
+        return /[?&]login=1(&|$)/.test(window.location.search) || window.location.hash === '#login';
+    } catch (e) {
+        return false;
+    }
+}
+
+// 관리자가 아닌 계정을 강제로 로그아웃시킨다. 차단했으면 true.
+// Firestore 일시 장애 폴백(_fallback)일 때는 판단을 보류한다 — 조회 실패만으로 관리자가 튕기면 안 됨.
+async function enforceAdminOnly(userData) {
+    if (!userData || userData._fallback || userData.isAdmin === true) return false;
+
+    logWarn('[로그인 차단] 관리자 계정이 아님 — 강제 로그아웃');
+    try {
+        if (auth) await auth.signOut();
+    } catch (error) {
+        logError('[로그인 차단] signOut 실패:', error);
+    }
+
+    authEpoch++;
+    isLoggingIn = false;
+    userDataCache = null;
+    sessionStorage.removeItem('loggedInUser');
+    sessionStorage.removeItem('loggedIn');
+    sessionStorage.removeItem('lastLoginMessage');
+    document.documentElement.setAttribute('data-auth', 'out');
+    try { setLoggedInState(false); } catch (e) { /* 무시 */ }
+    // 다른 탭에도 정리 전파 (logout()과 동일 — Auth persistence가 LOCAL이라 이미 로그아웃 상태)
+    try { localStorage.setItem('authLogoutAt', String(Date.now())); } catch (e) { /* 무시 */ }
+    try { setLoginBtnLoading(false); hideLogin(); } catch (e) { /* 무시 */ }
+
+    if (!adminBlockNotified) {
+        adminBlockNotified = true;
+        alert(LOGIN_DISABLED_MSG);
+    }
+
+    // 임직원 페이지에 머물러 있으면 홈으로 돌려보낸다
+    const currentPath = window.location.pathname;
+    if (currentPath.includes('staff.html')) {
+        window.location.href = currentPath.includes('/hanaro/staff/') ? '../../index.html' : '/index.html';
+    }
+    return true;
+}
+
 // Firestore 조회 캐시 (중복 조회 방지)
 let userDataCache = null;
 let userDataCacheTime = 0;
@@ -277,11 +332,13 @@ function setupAuthStateListener() {
                             logoutLink && logoutLink.style.display === 'flex') {
                             // UI가 이미 올바른 상태이면 Firestore 조회만 수행 (캐시 갱신)
                             needsUpdate = false;
-                            fetchUserData(user.uid, true).then(userData => {
+                            fetchUserData(user.uid, true).then(async userData => {
                                 // 로그아웃 이후 뒤늦게 도착한 응답이면 기록하지 않음 (세션 부활 방지)
                                 if (epochAtStart !== authEpoch || !auth || !auth.currentUser || auth.currentUser.uid !== user.uid) return;
                                 if (userData) {
                                     userData = preferStoredProfile(userData, user.uid); // 폴백이 정상 프로필을 덮지 않게
+                                    // 관리자 외 로그인 폐지 — 남아 있던 임직원/일반회원 세션도 여기서 정리된다
+                                    if (await enforceAdminOnly(userData)) return;
                                     sessionStorage.setItem("loggedInUser", JSON.stringify(userData));
                                     sessionStorage.setItem("loggedIn", "true");
                                     // UI는 이미 올바른 상태이므로 임직원 버튼만 업데이트
@@ -346,6 +403,9 @@ function setupAuthStateListener() {
                 return;
             }
             userData = preferStoredProfile(userData, user.uid); // 폴백(guest)이 정상 프로필을 덮지 않게
+
+            // 관리자 외 로그인 폐지 — 로그인 UI를 세우기 전에 차단해야 '환영합니다'가 뜨지 않는다
+            if (await enforceAdminOnly(userData)) return;
 
             // 항상 로그인 상태 유지 (Firestore 접근 실패와 무관)
             if (needsUpdate) {
@@ -606,6 +666,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // 마이페이지(내 정보 수정) 준비 — 스타일/헤더 링크/모달을 전 페이지 공통 주입
     try { ensureMyPageStyle(); ensureMyPageLink(); ensureMyPageModal(); } catch (e) { /* 무시 */ }
 
+    // 관리자용 숨은 로그인 진입(?login=1 / #login) — 로그인 창을 바로 열어준다
+    if (adminLoginRequested() && sessionStorage.getItem('loggedIn') !== 'true') {
+        try { showLogin(); } catch (e) { /* 무시 */ }
+    }
+
     // Firebase 초기화 및 리스너 설정 (비동기, 블로킹 없음)
     requestAnimationFrame(function() {
         if (!auth || !authDb) {
@@ -673,6 +738,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         // 로그아웃 이후 뒤늦게 도착한 응답이면 기록하지 않음 (세션 부활 방지)
                         if (epochAtStart !== authEpoch || !auth || !auth.currentUser || auth.currentUser.uid !== currentUser.uid) return;
                         userData = preferStoredProfile(userData, currentUser.uid);
+
+                        // 관리자 외 로그인 폐지 — 복원된 임직원/일반회원 세션도 여기서 정리
+                        if (await enforceAdminOnly(userData)) return;
 
                         sessionStorage.setItem("loggedInUser", JSON.stringify(userData));
                         sessionStorage.setItem("loggedIn", "true");
@@ -1360,6 +1428,10 @@ async function login() {
 
 async function register(userTypeArg) {
     log('[회원가입] register() 함수 호출됨 - userType:', userTypeArg);
+
+    // 임직원·일반회원 회원가입 폐지 — 안내창만 띄우고 가입 처리는 하지 않는다
+    alert(LOGIN_DISABLED_MSG);
+    return;
 
     // 연타/중복 진입 차단 — 첫 await(initFirebase) 이전에 걸어야 초기화 지연 중 이중 가입 시도가 안 생김
     if (isRegistering) {
