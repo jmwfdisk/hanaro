@@ -62,7 +62,7 @@ hanaro/
   js/router.js          ← SPA route handler + School section logic
   css/common.css        ← Shared design system
   css/auth.css          ← Login modal styles
-  AS/AS.html            ← A/S 신청 페이지
+  AS/AS.html            ← A/S 신청 페이지 (2026-09-01 전 페이지에서 메뉴·링크 제거 — 파일·데이터는 보존, 직접 URL로만 접근)
   Gallery/Gallery.html  ← 갤러리
   company/company.html  ← 회사 소개 (좌측 메뉴 + 우측 내용, 인증현황 드롭다운, 로고・CI; 모바일은 좌측메뉴가 제목 아래 가로 스크롤 칩)
   support/support.html  ← 고객지원 (Apple 지원 스타일: 제품 카테고리 + 퀵카드)
