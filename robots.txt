@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /hanaro/staff/
 Disallow: /hanaro/school/
+Disallow: /hanaro/AS/
 
 Sitemap: https://hanarooa.com/sitemap.xml
