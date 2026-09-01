@@ -75,6 +75,7 @@ hanaro/
   product/hs.html       ← HS시리즈
   product/oa.html       ← OA시리즈
   school/school.html    ← 납품학교 리스트 (로그인 필요)
+  messenger/messenger.html ← 사내 메신저 (2026-09-01 서비스 종료 — `SERVICE_ENDED=true` 플래그로 종료 안내만 표시. 되살리려면 플래그 false + staff.html `#messenger-nav` 노출. **여기서 `signOut()`을 부르면 홈페이지까지 로그아웃되므로 금지**)
   staff/staff.html      ← 임직원 전용 게시판 (2026-09-01 로그인 폐지 이후 실질 관리자 전용) — 모듈 상세는 `hanaro/staff/CLAUDE.md`
   lib/tabulator/        ← Locally bundled Tabulator.js (fallback)
   school/lib/tabulator/ ← Second copy of Tabulator, loaded by school.html
