@@ -1136,6 +1136,47 @@
 (function () {
     'use strict';
 
+    // ── 🛑 서비스 종료 ────────────────────────────────────────────────────
+    //
+    // true 면 종료 안내만 띄우고 **여기서 즉시 멈춘다** — 아래의 로그인 폼 연결·
+    // Firestore 조회·자동 로그아웃 예외가 하나도 실행되지 않는다.
+    // 되돌릴 때는 이 값만 false 로 바꾸면 원래 코드가 그대로 살아난다.
+    //
+    // ⚠️ 여기서 firebase.auth().signOut() 을 부르면 안 된다 — 인증 세션은 홈페이지와
+    //    공유라서 홈페이지까지 같이 로그아웃된다. 게이트가 화면 전체를 덮으므로
+    //    로그인 세션이 남아 있어도 대화·조직도에는 닿지 않는다.
+    var SERVICE_ENDED = true;
+
+    function showServiceEnded() {
+        var gate = document.getElementById('msg-gate');
+        if (!gate) return;
+        gate.hidden = false;
+        gate.innerHTML =
+            '<div class="msg-login" style="text-align:center;gap:0">' +
+            '<img class="msg-login-logo" alt="" src="../../image/logo-crayon.png">' +
+            '<div class="msg-login-title" style="margin-top:6px">하나로오에이퍼니처</div>' +
+            '<div style="font-size:17px;font-weight:700;color:var(--msg-text);margin-top:22px">' +
+            '서비스가 종료되었습니다</div>' +
+            '<div style="font-size:14px;line-height:1.75;color:var(--msg-sub);margin-top:12px">' +
+            '하나로 메신저 서비스가 종료되어<br>더 이상 로그인할 수 없습니다.<br><br>' +
+            '그동안 이용해 주셔서 감사합니다.</div>' +
+            '<div style="font-size:12.5px;color:var(--msg-sub);margin-top:20px">' +
+            '문의 : 회사 홈페이지 <a href="https://hanarooa.com">hanarooa.com</a></div>' +
+            '</div>';
+    }
+
+    if (SERVICE_ENDED) {
+        // auth.js 는 로그인/로그아웃이 확정될 때마다 이 훅을 부른다. 종료 안내를 다시
+        // 그려 넣어, 어떤 경로로 들어와도 게이트가 걷히지 않게 한다.
+        window.checkStaffAccess = function () { showServiceEnded(); return false; };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', showServiceEnded);
+        } else {
+            showServiceEnded();
+        }
+        return;
+    }
+
     // ── 상태 ──────────────────────────────────────────────────────────────
     var db = null;
     var meUid = null;
